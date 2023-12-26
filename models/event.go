@@ -2,8 +2,8 @@ package models
 
 import (
 	"time"
+
 	"github.com/Ali-Assar/go-REST-Api.git/db"
-	"database/sql"
 )
 
 type Event struct {
@@ -17,65 +17,97 @@ type Event struct {
 
 var events = []Event{}
 
-func (e Event) Save() {
+func (e Event) Save() error {
 	// Database will be added later
-	query:=`
+	query := `
 	INSERT INTO events(name, description, location, dateTime, user_id)
 	VALUES (?,?,?,?,?)
 	`
 	stmt, err := db.DB.Prepare(query)
-	
-	if err!=nil{
+
+	if err != nil {
 		return err
 	}
 	defer stmt.Close()
 
-	result,err:= stmt.Exec(e.Name,e.Description,e.Location,e.DateTime,e.UserID)
-	
-	if err!=nil{
+	result, err := stmt.Exec(e.Name, e.Description, e.Location, e.DateTime, e.UserID)
+
+	if err != nil {
 		return err
 	}
 
-	id,err:=result.LastInserId()
-	e.Id =id
-	return err
-
+	id, err := result.LastInsertId()
+	e.ID = id
 
 	events = append(events, e)
+	return err
 }
 
-func GetAllEvents() ([]Event,error) {
-	query :="SELECT * FROM events"
-	rows, err:= db.DB.Query(query)
-	if err!=nil{
-		return nil,err
+func GetAllEvents() ([]Event, error) {
+	query := "SELECT * FROM events"
+	rows, err := db.DB.Query(query)
+	if err != nil {
+		return nil, err
 	}
 	defer rows.Close()
 
 	var events []Event
 
-	for rows.Next(){
+	for rows.Next() {
 		var event Event
-		err :=rows.Scan(&event.ID, &event.Name, &event.Description, &event.Location, &event.DateTime, &event.UserID)
-		
-		if err!=nil{
-			return nil,err
+		err := rows.Scan(&event.ID, &event.Name, &event.Description, &event.Location, &event.DateTime, &event.UserID)
+
+		if err != nil {
+			return nil, err
 		}
 
-		events=append(events,event)
+		events = append(events, event)
 	}
 
 	return events, nil
 }
 
-func GetEventByID(id int64)(*Event,error){
-	query:= "SELECT * FROM events WHERE id = ?"
-	row:=db.DB.QueryRow(query, id)
+func GetEventByID(id int64) (*Event, error) {
+	query := "SELECT * FROM events WHERE id = ?"
+	row := db.DB.QueryRow(query, id)
 
-	var event event
-	err :=rows.Scan(&event.ID, &event.Name, &event.Description, &event.Location, &event.DateTime, &event.UserID)
-	if err!=nil{
-		return nil,err
+	var event Event
+	err := row.Scan(&event.ID, &event.Name, &event.Description, &event.Location, &event.DateTime, &event.UserID)
+	if err != nil {
+		return nil, err
 	}
-	return &Event,nil
+	return &event, nil
+}
+
+func (event Event) Update() error {
+	query := `
+	UPDATE events
+	SET name = ?, description = ?, location = ?, dateTime = ?
+	WHERE id =?
+	`
+	stmt, err := db.DB.Prepare(query)
+
+	if err != nil {
+		return err
+	}
+
+	defer stmt.Close()
+
+	_, err = stmt.Exec(event.Name, event.Description, event.Location, event.DateTime, event.ID)
+	return err
+
+}
+
+func (event Event) Delete() error {
+	query := "DELETE FROM events WHERE id=?"
+	stmt, err := db.DB.Prepare(query)
+
+	if err != nil {
+		return err
+	}
+
+	defer stmt.Close()
+
+	_, err = stmt.Exec(event.ID)
+	return err
 }
