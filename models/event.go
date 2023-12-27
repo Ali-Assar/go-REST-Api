@@ -7,12 +7,12 @@ import (
 )
 
 type Event struct {
-	ID          int64
-	Name        string    `binding: "required"`
-	Description string    `binding: "required"`
-	Location    string    `binding: "required"`
-	DateTime    time.Time `binding: "required"`
-	UserID      int
+	ID          int64     `json:"id"`
+	Name        string    `json:"name" binding:"required"`
+	Description string    `json:"description" binding:"required"`
+	Location    string    `json:"location" binding:"required"`
+	DateTime    time.Time `json:"dateTime" binding:"required"`
+	UserID      int       `json:"userID"`
 }
 
 var events = []Event{}
@@ -83,7 +83,7 @@ func (event Event) Update() error {
 	query := `
 	UPDATE events
 	SET name = ?, description = ?, location = ?, dateTime = ?
-	WHERE id =?
+	WHERE id = ?;
 	`
 	stmt, err := db.DB.Prepare(query)
 
