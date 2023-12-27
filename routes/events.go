@@ -5,7 +5,6 @@ import (
 	"strconv"
 
 	"github.com/Ali-Assar/go-REST-Api.git/models"
-	"github.com/Ali-Assar/go-REST-Api.git/utils"
 	"github.com/gin-gonic/gin"
 )
 
@@ -36,29 +35,16 @@ func getEvent(context *gin.Context) {
 }
 
 func createEvent(context *gin.Context) {
-	token := context.Request.Header.Get("Authorization")
-
-	if token == "" {
-		context.JSON(http.StatusUnauthorized, gin.H{"message": "not authorized"})
-		return
-	}
-
-	err := utils.VerifyToken(token)
-
-	if err != nil {
-		context.JSON(http.StatusUnauthorized, gin.H{"message": "not authorized"})
-		return
-	}
-
 	var event models.Event
-	err = context.ShouldBindJSON(&event)
+	err := context.ShouldBindJSON(&event)
 
 	if err != nil {
 		context.JSON(http.StatusBadRequest, gin.H{"message": "Could not parse request data."})
 		return
 	}
 
-	event.UserID = 1
+	userId := context.GetInt64("userId")
+	event.UserID = userId
 
 	err = event.Save()
 	if err != nil {
@@ -72,14 +58,20 @@ func createEvent(context *gin.Context) {
 func updateEvent(context *gin.Context) {
 	eventId, err := strconv.ParseInt(context.Param("id"), 10, 64)
 	if err != nil {
-		context.JSON(http.StatusBadRequest, gin.H{"message": "Could not parse event id"})
+		context.JSON(http.StatusBadRequest, gin.H{"message": "could not parse event id"})
 		return
 	}
 
-	_, err = models.GetEventByID(eventId)
+	userId := context.GetInt64("userId")
+	event, err := models.GetEventByID(eventId)
 
 	if err != nil {
 		context.JSON(http.StatusInternalServerError, gin.H{"message": "could not fetch the event"})
+		return
+	}
+
+	if event.UserID != userId {
+		context.JSON(http.StatusUnauthorized, gin.H{"message": "not authorized"})
 		return
 	}
 
@@ -108,9 +100,15 @@ func deleteEvent(context *gin.Context) {
 		return
 	}
 	event, err := models.GetEventByID(eventId)
+	userId := context.GetInt64("userId")
 
 	if err != nil {
 		context.JSON(http.StatusInternalServerError, gin.H{"message": "could not fetch the event"})
+		return
+	}
+
+	if event.UserID != userId {
+		context.JSON(http.StatusUnauthorized, gin.H{"message": "not authorized"})
 		return
 	}
 
